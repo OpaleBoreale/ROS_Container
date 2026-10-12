@@ -72,18 +72,41 @@ alias gcl='git clone'
 # Alias monitoring
 alias htop='htop -t'
 
-# ---------- ROS 2 ----------
-source /opt/ros/${ROS_DISTRO}/setup.zsh
-[ -f /ros2_ws/install/setup.zsh ] && source /ros2_ws/install/setup.zsh
-export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+# ---------- ROS ----------
+if [[ "$ROS_DISTRO" == noetic ]]; then
+    # ROS 1 Noetic — catkin workspace in ~/catkin_ws (same path as the class guides)
+    source /opt/ros/noetic/setup.zsh
+    [ -f ~/catkin_ws/devel/setup.zsh ] && source ~/catkin_ws/devel/setup.zsh
+    export TURTLEBOT3_MODEL=${TURTLEBOT3_MODEL:-burger}
 
-alias cb='cd /ros2_ws && colcon build --symlink-install'
-alias cbp='cd /ros2_ws && colcon build --symlink-install --packages-select'
-alias ct='cd /ros2_ws && colcon test && colcon test-result --verbose'
-alias sw='source /ros2_ws/install/setup.zsh'
-alias ws='cd /ros2_ws'
-alias rtl='ros2 topic list'
-alias rnl='ros2 node list'
+    alias ws='cd ~/catkin_ws'
+    alias sw='source ~/catkin_ws/devel/setup.zsh'
+    cb()  { (cd ~/catkin_ws && catkin_make "$@") && source ~/catkin_ws/devel/setup.zsh; }
+    cbp() { (cd ~/catkin_ws && catkin_make --pkg "$@") && source ~/catkin_ws/devel/setup.zsh; }
+    alias rtl='rostopic list'
+    alias rnl='rosnode list'
+
+    # TurtleBot3 shortcuts (class guides)
+    alias tb3-world='roslaunch turtlebot3_gazebo turtlebot3_world.launch'
+    alias tb3-circuit='roslaunch turtlebot3_gazebo turtlebot3_circuit_competition.launch'
+    alias tb3-teleop='roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch'
+    alias tb3-slam='roslaunch turtlebot3_slam turtlebot3_slam.launch slam_methods:=gmapping'
+    alias tb3-savemap='rosrun map_server map_saver -f ~/maps/map'
+    tb3-nav() { roslaunch turtlebot3_navigation turtlebot3_navigation.launch map_file:=$HOME/maps/${1:-map}.yaml; }
+else
+    # ROS 2 — colcon workspace in /ros2_ws
+    source /opt/ros/${ROS_DISTRO}/setup.zsh
+    [ -f /ros2_ws/install/setup.zsh ] && source /ros2_ws/install/setup.zsh
+    export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+
+    alias ws='cd /ros2_ws'
+    alias sw='source /ros2_ws/install/setup.zsh'
+    alias cb='cd /ros2_ws && colcon build --symlink-install'
+    alias cbp='cd /ros2_ws && colcon build --symlink-install --packages-select'
+    alias ct='cd /ros2_ws && colcon test && colcon test-result --verbose'
+    alias rtl='ros2 topic list'
+    alias rnl='ros2 node list'
+fi
 
 # SSH agent (si nécessaire)
 if [ -z "$SSH_AUTH_SOCK" ]; then
@@ -95,7 +118,7 @@ eval "$(starship init zsh)"
 
 # Complétion Zsh (+ bashcompinit pour ros2 / colcon)
 autoload -Uz compinit bashcompinit && compinit && bashcompinit
-command -v register-python-argcomplete >/dev/null && \
+[[ "$ROS_VERSION" == 2 ]] && command -v register-python-argcomplete >/dev/null && \
     eval "$(register-python-argcomplete ros2)" && \
     eval "$(register-python-argcomplete colcon)"
 
@@ -160,9 +183,14 @@ print_welcome() {
 
     echo ""
     echo "\033[90m+--------------------------------+\033[0m"
-    echo "\033[90m|\033[0m  \033[36mROS 2 ${(C)ROS_DISTRO} (arm64)\033[0m"
+    echo "\033[90m|\033[0m  \033[36mROS ${ROS_VERSION} ${(C)ROS_DISTRO} (arm64)\033[0m"
     echo "\033[90m|--------------------------------|\033[0m"
-    echo "\033[90m|\033[0m  Domain: \033[33m$ROS_DOMAIN_ID\033[0m"
+    if [[ "$ROS_VERSION" == 1 ]]; then
+        echo "\033[90m|\033[0m  Model:  \033[33m$TURTLEBOT3_MODEL\033[0m"
+        echo "\033[90m|\033[0m  GUI:    \033[33mlocalhost:6080/vnc.html\033[0m"
+    else
+        echo "\033[90m|\033[0m  Domain: \033[33m$ROS_DOMAIN_ID\033[0m"
+    fi
     echo "\033[90m|\033[0m  Uptime: \033[34m$uptime\033[0m"
     echo "\033[90m|\033[0m  Kernel: \033[35m$kernel\033[0m"
     echo "\033[90m+--------------------------------+\033[0m"

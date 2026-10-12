@@ -1,18 +1,55 @@
+x-common: &common
+  platform: linux/arm64
+  init: true                         # clean signal handling for long-running CMD
+  environment: &common-env
+    HISTFILE: /root/.zsh_hist/history
+
 services:
-  ros:
-    build: .
-    platform: linux/arm64
-    image: ros2-jazzy-arm64
-    container_name: ros2
-    hostname: ros2          # shown by Starship instead of a random container ID
+  # ROS 1 Noetic + TurtleBot3 + Gazebo, desktop in the browser (class labs)
+  noetic:
+    <<: *common
+    build:
+      context: .
+      dockerfile: docker/noetic.Dockerfile
+    image: ros-noetic-arm64
+    container_name: ros-noetic
+    hostname: noetic
+    ports:
+      - "127.0.0.1:6080:6080"        # noVNC desktop: http://localhost:6080/vnc.html
     volumes:
-      - ./ros2_ws/src:/ros2_ws/src   # your packages live on the Mac, build inside
-      - zsh_history:/root/.zsh_hist  # keep shell history across container rebuilds
-    shm_size: "512mb"       # DDS shared-memory transport needs more than the 64 MB default
+      - ./catkin_ws/src:/root/catkin_ws/src   # your packages live on the Mac
+      - ./maps:/root/maps                     # maps saved by map_saver
+      - catkin_build:/root/catkin_ws/build    # build artifacts survive restarts
+      - catkin_devel:/root/catkin_ws/devel
+      - gazebo_cache:/root/.gazebo            # Gazebo models & logs
+      - zsh_history:/root/.zsh_hist
+    shm_size: "2gb"                  # Gazebo + RViz need far more than the 64 MB default
     environment:
-      - ROS_DOMAIN_ID=0
-      - HISTFILE=/root/.zsh_hist/history
-    init: true              # clean signal handling for `sleep infinity`
+      <<: *common-env
+      TURTLEBOT3_MODEL: burger
+      ROS_MASTER_URI: http://localhost:11311
+      ROS_HOSTNAME: localhost
+      VNC_GEOMETRY: 1600x900
+
+  # ROS 2 Jazzy, headless
+  jazzy:
+    <<: *common
+    build:
+      context: .
+      dockerfile: docker/jazzy.Dockerfile
+    image: ros2-jazzy-arm64
+    container_name: ros2-jazzy
+    hostname: jazzy
+    volumes:
+      - ./ros2_ws/src:/ros2_ws/src
+      - zsh_history:/root/.zsh_hist
+    shm_size: "512mb"                # DDS shared-memory transport
+    environment:
+      <<: *common-env
+      ROS_DOMAIN_ID: 0
 
 volumes:
+  catkin_build:
+  catkin_devel:
+  gazebo_cache:
   zsh_history:

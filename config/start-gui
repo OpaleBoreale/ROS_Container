@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Starts an XFCE desktop on display :1 and serves it in the browser via noVNC.
+set -e
+
+export DISPLAY=:1
+rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
+
+# VNC server, only reachable from inside the container (noVNC proxies it)
+Xvnc :1 -geometry "${VNC_GEOMETRY:-1600x900}" -depth 24 \
+     -SecurityTypes None -localhost -rfbport 5901 -AlwaysShared \
+     >/tmp/xvnc.log 2>&1 &
+
+for _ in $(seq 1 20); do
+    [ -e /tmp/.X11-unix/X1 ] && break
+    sleep 0.5
+done
+
+dbus-launch --exit-with-session startxfce4 >/tmp/xfce.log 2>&1 &
+
+echo "Desktop ready: http://localhost:6080/vnc.html"
+exec websockify --web /usr/share/novnc 6080 localhost:5901

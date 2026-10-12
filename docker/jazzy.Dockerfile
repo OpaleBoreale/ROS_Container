@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ROS 2 Jazzy (LTS, Ubuntu 24.04) — headless, native arm64 for Apple Silicon Macs
+# Build context is the repo root (see docker-compose.yml)
 FROM --platform=linux/arm64 ros:jazzy-ros-base
 
 ENV DEBIAN_FRONTEND=noninteractive \
