@@ -1,15 +1,10 @@
-# ROS 2 build artifacts
+# ROS 2 build artifacts (they live in Docker volumes, but just in case)
 ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
 
-# catkin (build/ and devel/ live in Docker volumes, but just in case)
-catkin_ws/build/
-catkin_ws/devel/
-catkin_ws/src/CMakeLists.txt
-
-# Third-party repos cloned by `make tb3-setup`
-catkin_ws/src/urrc_simulation/
-catkin_ws/src/turtlebot3_autorace_2020/
+# Third-party repo cloned by `make tb3-setup`
+ros2_ws/src/turtlebot3_autorace/
 
 .DS_Store
+__pycache__/

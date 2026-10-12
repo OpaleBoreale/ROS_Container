@@ -2,13 +2,13 @@
 
 # 🤖 ROS_Container
 
-**ROS development containers for Apple Silicon Macs**
-ROS 1 Noetic with TurtleBot3 & Gazebo · ROS 2 Jazzy headless
+**A ROS 2 Jazzy development container for Apple Silicon Macs**
+TurtleBot3 · Gazebo Harmonic · Nav2 · Cartographer · desktop in the browser
 
-![ROS 1](https://img.shields.io/badge/ROS_1-Noetic-22314E?logo=ros&logoColor=white)
 ![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-22314E?logo=ros&logoColor=white)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-24.04-E95420?logo=ubuntu&logoColor=white)
 ![Arch](https://img.shields.io/badge/arch-arm64-993955)
-![Gazebo](https://img.shields.io/badge/Gazebo-11-FFD166)
+![Gazebo](https://img.shields.io/badge/Gazebo-Harmonic-FFD166)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Shell](https://img.shields.io/badge/shell-zsh_+_Starship-1B998B)
 
@@ -18,12 +18,12 @@ ROS 1 Noetic with TurtleBot3 & Gazebo · ROS 2 Jazzy headless
 
 ## ✨ Features
 
-- **Two containers, one Makefile.** `ROS=noetic` (default) or `ROS=jazzy` on any command.
-- **Native arm64.** No Rosetta emulation, so builds stay fast.
-- **Noetic for TurtleBot3.** Ubuntu 20.04, `desktop-full`, Gazebo 11, RViz, gmapping, navigation and AutoRace 2020, ready for the class labs. See **[TURTLEBOT3.md](TURTLEBOT3.md)**.
-- **Desktop in the browser.** Gazebo and RViz run in an XFCE desktop served by noVNC. No XQuartz needed.
-- **Jazzy, headless.** A light ROS 2 environment with `colcon` and the demo nodes.
-- **Live workspaces.** Edit packages on the Mac in `catkin_ws/src` or `ros2_ws/src`, build inside the container.
+- **Native arm64.** Runs on M-series chips without Rosetta emulation.
+- **ROS 2 Jazzy (LTS)** on Ubuntu 24.04, supported until 2029.
+- **TurtleBot3 ready.** Gazebo Harmonic, Cartographer, Nav2, AutoRace, RViz and rqt. The class labs are in **[TURTLEBOT3.md](TURTLEBOT3.md)**.
+- **Competition tracks.** The Upper Rhine Robotic Challenge circuit and the AutoRace 2020 track, ported to the new Gazebo (`tb3_worlds` package).
+- **Desktop in the browser.** Gazebo, RViz and rqt run in an XFCE desktop served by noVNC. No XQuartz needed.
+- **Live workspace.** Edit packages on the Mac in `ros2_ws/src`, build inside the container.
 - **Comfortable shell.** zsh, a custom Starship prompt, Vim, `eza`, `fzf`, `htop`, `gdb`, `valgrind`.
 
 ## 📋 Requirements
@@ -41,23 +41,16 @@ ROS 1 Noetic with TurtleBot3 & Gazebo · ROS 2 Jazzy headless
 git clone git@github.com:mferracc/ROS_Container.git
 cd ROS_Container
 
-make build       # ROS 1 Noetic image (~20-30 min the first time)
+make build       # ~15-20 min the first time
 make up
-make tb3-setup   # clone the TurtleBot3 class repos and build them
+make tb3-setup   # clone AutoRace and build the workspace
 make gui         # open the desktop in your browser
 make tb3-world   # TurtleBot3 World in Gazebo
 ```
 
-For ROS 2, add `ROS=jazzy`:
-
-```bash
-make build ROS=jazzy
-make shell ROS=jazzy
-```
-
 ## 🛠️ Makefile commands
 
-Run `make help` to see this list in your terminal. Every command accepts `ROS=noetic` (default) or `ROS=jazzy`.
+Run `make help` to see this list in your terminal.
 
 ### Container
 
@@ -65,10 +58,10 @@ Run `make help` to see this list in your terminal. Every command accepts `ROS=no
 |---------|-------------|
 | `make build` | Build the image |
 | `make up` | Start the container |
-| `make down` | Stop and remove the containers |
+| `make down` | Stop and remove the container |
 | `make restart` | Restart the container |
 | `make shell` | Open an interactive zsh shell |
-| `make gui` | Open the desktop at http://localhost:6080/vnc.html (Noetic) |
+| `make gui` | Open the desktop at http://localhost:6080/vnc.html |
 | `make logs` / `make status` | Logs / container status |
 
 ### Workspace
@@ -76,24 +69,25 @@ Run `make help` to see this list in your terminal. Every command accepts `ROS=no
 | Command | Description |
 |---------|-------------|
 | `make rosdep` | Install the dependencies of every package in `src/` |
-| `make ws-build` | `catkin_make` (Noetic) or `colcon build` (Jazzy) |
+| `make ws-build` | `colcon build --symlink-install` |
 | `make ws-build PKG=my_pkg` | Build a single package |
+| `make ws-test` | Run tests and show results (`PKG=` works too) |
 | `make ws-clean` | Delete build artifacts |
-| `make run CMD='rostopic list'` | Run any command inside the container |
-| `make talker` / `make listener` | Demo publisher / subscriber |
+| `make run CMD='ros2 topic list'` | Run any command inside the container |
+| `make talker` / `make listener` / `make turtlesim` | Demos |
 
-### TurtleBot3 (Noetic)
+### TurtleBot3
 
 | Command | Description |
 |---------|-------------|
-| `make tb3-setup` | Clone the competition simulation and AutoRace 2020, then build |
-| `make tb3-world` | Gazebo: TurtleBot3 World |
+| `make tb3-setup` | Clone AutoRace and build the workspace |
+| `make tb3-world` / `make tb3-house` | Gazebo: TurtleBot3 World / House |
 | `make tb3-circuit` | Gazebo: competition circuit |
 | `make tb3-autorace` | Gazebo: AutoRace 2020 track |
 | `make tb3-teleop` | Keyboard teleoperation |
-| `make tb3-slam` | SLAM with gmapping + RViz |
+| `make tb3-slam` | SLAM with Cartographer + RViz |
 | `make tb3-savemap MAP=name` | Save the map to `maps/name.yaml` |
-| `make tb3-nav MAP=name` | Navigation with `maps/name.yaml` |
+| `make tb3-nav MAP=name` | Nav2 with `maps/name.yaml` |
 
 Each launch command runs in the foreground, so use one terminal tab per command.
 
@@ -102,32 +96,34 @@ Each launch command runs in the foreground, so use one terminal tab per command.
 | Command | Description |
 |---------|-------------|
 | `make rebuild` | Rebuild the image from scratch, without cache |
-| `make clean` | Remove containers, images and build volumes (your code is kept) |
+| `make clean` | Remove the container, image and build volumes (your code is kept) |
 | `make prune` | Free up the Docker build cache |
 
 ## 🐚 Shell shortcuts
 
-These come from `config/zshrc` and adapt to the ROS version:
+These come from `config/zshrc`:
 
-| Alias | Noetic | Jazzy |
-|-------|--------|-------|
-| `ws` | `cd ~/catkin_ws` | `cd /ros2_ws` |
-| `cb` | `catkin_make` + source | `colcon build --symlink-install` |
-| `cbp <pkg>` | build one package | build one package |
-| `sw` | source `devel/setup.zsh` | source `install/setup.zsh` |
-| `rtl` / `rnl` | `rostopic` / `rosnode list` | `ros2 topic` / `ros2 node list` |
-| `tb3-*` | TurtleBot3 launches (see [TURTLEBOT3.md](TURTLEBOT3.md)) | — |
+| Alias | Command |
+|-------|---------|
+| `ws` | `cd /ros2_ws` |
+| `cb` / `cbp <pkg>` | `colcon build` (all / one package), then source |
+| `sw` | source `install/setup.zsh` |
+| `ct` | `colcon test` + results |
+| `rtl` / `rnl` | `ros2 topic list` / `ros2 node list` |
+| `tb3-*` | TurtleBot3 launches (see [TURTLEBOT3.md](TURTLEBOT3.md)) |
+| `gs` `ga` `gc` `gp` `gl` | Git status / add / commit / push / log graph |
+| `l` `ll` `lt` | `eza` listings / tree view |
 
-Git aliases (`gs` `ga` `gc` `gp` `gl`) and `eza` listings (`l` `ll` `lt`) work in both. The shell uses vi keybindings, `Ctrl-R` opens fzf history search, and ↑/↓ searches history by prefix.
+Tab completion works for `ros2` and `colcon`. The shell uses vi keybindings, `Ctrl-R` opens fzf history search, and ↑/↓ searches history by prefix.
 
 ## 🎨 Customization
 
 ```
 config/
-├── zshrc           # shell options, aliases, ROS sourcing (Noetic and Jazzy)
+├── zshrc           # shell options, aliases, ROS sourcing
 ├── starship.toml   # prompt
 ├── vimrc           # editor
-└── start-gui       # VNC + noVNC desktop launcher (Noetic)
+└── start-gui       # VNC + noVNC desktop launcher
 ```
 
 After editing a file, run `make build restart`. The dotfiles are copied in the image's last layers, so this only takes a few seconds.
@@ -143,22 +139,23 @@ The prompt uses this [coolors](https://coolors.co/993955-ffd166-080357-1b998b-f8
 ```
 ROS_Container/
 ├── docker/
-│   ├── noetic.Dockerfile   # ROS 1 + TurtleBot3 + Gazebo + noVNC desktop
-│   └── jazzy.Dockerfile    # ROS 2, headless
-├── docker-compose.yml      # both services, mounts, volumes
+│   └── jazzy.Dockerfile    # ROS 2 Jazzy + TurtleBot3 + Gazebo + noVNC desktop
+├── docker-compose.yml      # container config, mounts, volumes
 ├── Makefile                # command shortcuts
 ├── config/                 # dotfiles + desktop launcher
-├── catkin_ws/src/          # ROS 1 packages
-├── ros2_ws/src/            # ROS 2 packages
+├── tools/
+│   └── port_worlds.py      # Gazebo Classic -> gz sim world converter
+├── ros2_ws/src/
+│   └── tb3_worlds/         # competition circuit + AutoRace track
 ├── maps/                   # maps saved by map_saver
 └── TURTLEBOT3.md           # class labs, step by step (in French)
 ```
 
 ## ⚠️ Limitations on macOS
 
-- **No GPU.** Gazebo and RViz use software rendering. TurtleBot3 World is smooth; the circuit and AutoRace tracks are slower.
-- **No host networking by default.** A real robot can't reach nodes inside the container, which ROS 1 needs. [TURTLEBOT3.md](TURTLEBOT3.md#-robot-réel) explains the workarounds.
-- **No USB passthrough.** Serial devices like `/dev/ttyUSB0` can't be passed to the container. Flash the OpenCR from the robot's Raspberry Pi instead.
+- **No GPU.** Gazebo and RViz use software rendering. Run Gazebo with `gui:=false` and keep only RViz if it's slow.
+- **Simulation only.** Docker Desktop has no host networking by default, so a real robot can't reach nodes inside the container.
+- **No USB passthrough.** Serial devices like `/dev/ttyUSB0` can't be passed to the container.
 
 ## 🧰 Editor integration
 
@@ -166,6 +163,5 @@ ROS_Container/
 - **CLion:** generate a compilation database inside the container, then open the workspace in CLion:
 
   ```bash
-  catkin_make -DCMAKE_EXPORT_COMPILE_COMMANDS=ON                       # Noetic
-  colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON         # Jazzy
+  colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
   ```

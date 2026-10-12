@@ -1,10 +1,21 @@
-# 🐢 TurtleBot3 — sujets de cours dans le container
+# 🐢 TurtleBot3 sur ROS 2 Jazzy
 
-Ce guide reprend le *Guide TurtleBot* (RobotHub Académie) et le *Tutorial simulation TurtleBot ROS1 Noetic*, section par section, avec les commandes à taper dans le container `noetic`.
+Ce guide reprend le *Guide TurtleBot* (RobotHub Académie) et le *Tutorial simulation TurtleBot*, section par section, en version **ROS 2 Jazzy**.
 
-Tout se passe sur ton Mac : pas besoin de machine virtuelle Ubuntu. Le container est déjà en **Ubuntu 20.04 + ROS Noetic**, la version demandée par les deux sujets.
+Les deux sujets sont écrits pour ROS 1 Noetic, qui est en fin de vie depuis mai 2025. Les étapes restent les mêmes, seuls les outils changent :
 
-> **Ouvrir plusieurs terminaux.** Les guides disent « ouvre un nouveau terminal avec Ctrl+Alt+T ». Ici, ouvre un nouvel onglet dans ton terminal Mac (⌘T) et tape `make shell`. Chaque onglet est un shell dans le même container, avec ROS déjà sourcé et `TURTLEBOT3_MODEL=burger` déjà défini.
+| ROS 1 Noetic (sujets) | ROS 2 Jazzy (ici) |
+|-----------------------|-------------------|
+| `roscore` | plus nécessaire |
+| `rosrun pkg node` / `roslaunch pkg x.launch` | `ros2 run pkg node` / `ros2 launch pkg x.launch.py` |
+| `rostopic` / `rosnode` / `rosservice` | `ros2 topic` / `ros2 node` / `ros2 service` |
+| `catkin_make` dans `~/catkin_ws` | `colcon build` dans `/ros2_ws` |
+| Gazebo 11 (Classic) | Gazebo Harmonic (`gz sim`) |
+| SLAM gmapping | Cartographer |
+| Navigation `move_base` + AMCL | Nav2 |
+| `map_server map_saver` | `nav2_map_server map_saver_cli` |
+
+> **Ouvrir plusieurs terminaux.** Les guides disent « ouvre un nouveau terminal ». Ici, ouvre un nouvel onglet dans ton terminal Mac (⌘T) et tape `make shell`, ou utilise `make <cible>` directement. Chaque onglet est un shell dans le même container.
 
 > **Fenêtres graphiques.** Gazebo, RViz et rqt s'affichent dans le bureau du navigateur : `make gui` ou http://localhost:6080/vnc.html, puis *Connect*.
 
@@ -13,19 +24,17 @@ Tout se passe sur ton Mac : pas besoin de machine virtuelle Ubuntu. Le container
 ## 0. Première installation (une seule fois)
 
 ```bash
-make build       # ~20-30 min la première fois (ROS desktop-full + Gazebo)
+make build       # ~15-20 min la première fois
 make up
-make tb3-setup   # clone la simulation de la compétition + AutoRace 2020, puis catkin_make
+make tb3-setup   # clone AutoRace (Jazzy) et compile le workspace
 ```
 
-`make tb3-setup` place deux dépôts dans `catkin_ws/src/` :
+Le workspace contient deux paquets :
 
-| Dossier | Contenu |
-|---------|---------|
-| `urrc_simulation/` | dépôt de la compétition (*Upper Rhine Robotic Challenge*) : `turtlebot3_gazebo` avec le circuit, `turtlebot3_world`, AutoRace… |
-| `turtlebot3_autorace_2020/` | détection de lignes, panneaux, missions (partie 5 et 6) |
-
-> Le *Guide TurtleBot* (4.1) demande de cloner `ROBOTIS-GIT/turtlebot3_simulations`. **Ne le fais pas** : le dépôt de la compétition en est une copie qui contient déjà les mêmes paquets, et deux paquets du même nom dans un workspace font échouer `catkin_make`.
+| Paquet | Contenu |
+|--------|---------|
+| `tb3_worlds` (dans le dépôt) | le **circuit de la compétition** et la **piste AutoRace 2020**, convertis pour le nouveau Gazebo |
+| `turtlebot3_autorace` (cloné) | détection de lignes, panneaux, feux, missions (ROBOTIS, branche `jazzy`) |
 
 ---
 
@@ -36,17 +45,21 @@ make tb3-setup   # clone la simulation de la compétition + AutoRace 2020, puis 
 **Lancer le terrain de la compétition :**
 
 ```bash
-make tb3-circuit          # ou, dans un shell : tb3-circuit
+make tb3-circuit
 ```
 
-> Le PDF écrit `TURTLEBOT3_MODEL=buger` : c'est une coquille, la bonne valeur est `burger` (déjà définie dans le container).
+Le robot est un Burger équipé d'une caméra (`burger_cam`), placé sur la ligne de départ.
 
-**Voir les capteurs dans RViz** (caméra, lidar), dans un deuxième onglet :
+> Le circuit a été converti depuis la version ROS 1 du dépôt de la compétition (textures, panneaux, murs, obstacles). Si un élément manque ou a un rendu différent de la figure 1 du sujet, dis-le-moi.
+
+**Voir les capteurs dans RViz**, dans un deuxième onglet :
 
 ```bash
 make shell
-rviz        # Add → By topic → /camera/image (Image), /scan (LaserScan)
+rviz2       # Add → By topic → /camera/image_raw (Image), /scan (LaserScan)
 ```
+
+Ou, pour la caméra seule : `ros2 run rqt_image_view rqt_image_view`.
 
 ---
 
@@ -54,15 +67,7 @@ rviz        # Add → By topic → /camera/image (Image), /scan (LaserScan)
 
 ### 1. Setup
 
-| Section | Dans le container |
-|---------|-------------------|
-| 1.1 PC Setup | Déjà fait : l'image contient ROS Noetic et les paquets TurtleBot3. Le guide indique Ubuntu 22.04 mais Noetic tourne sur **20.04**, comme le container. |
-| 1.2 Raspberry Setup | Se fait sur la carte SD du robot, pas sur le Mac. |
-| 1.3 OpenCR Setup | Se fait **depuis le Raspberry Pi** en SSH (`ssh ubuntu@<IP_DU_ROBOT>`), ça marche directement depuis le terminal du Mac. |
-
-### 2. Bringup et 3. Teleoperation (robot réel)
-
-Voir [Robot réel](#-robot-réel) plus bas.
+Le **1.1 PC Setup** est déjà fait par l'image. Les parties qui concernent le robot physique (1.2 Raspberry, 1.3 OpenCR, 2 Bringup, 3 Teleoperation sur le robot) sont laissées de côté : tout se fait en simulation ci-dessous.
 
 ### 4. Simulation avec Gazebo
 
@@ -73,106 +78,72 @@ make tb3-world      # onglet 1 : Gazebo, TurtleBot3 World
 make tb3-teleop     # onglet 2 : pilotage au clavier
 ```
 
-Les touches sont `w` `a` `s` `d` `x` (le guide parle de ZQSD, mais ce sont bien les lettres w/a/s/d/x qui comptent, même sur un clavier AZERTY). Le terminal du teleop doit avoir le focus.
+Les touches sont `w` `a` `s` `d` `x`. Le terminal du teleop doit avoir le focus.
 
-**Importer le circuit du guide (`.world`, `.launch`, dossier `Circuit`)** : copie les fichiers fournis dans
-`catkin_ws/src/urrc_simulation/turtlebot3_gazebo/` (sous-dossiers `worlds/`, `launch/`, `models/`) depuis le Finder, puis :
-
-```bash
-make ws-build
-make run CMD='roslaunch turtlebot3_gazebo Circuit.launch'
-```
-
-> Le dépôt de la compétition contient déjà `worlds/Circuit.world` et `models/Circuit`, via `make tb3-circuit`.
-
-**4.2 SLAM**
+**4.2 SLAM** (Cartographer remplace gmapping)
 
 ```bash
 make tb3-world      # onglet 1
-make tb3-slam       # onglet 2 : gmapping + RViz
+make tb3-slam       # onglet 2 : Cartographer + RViz
 make tb3-teleop     # onglet 3 : explore la zone
 make tb3-savemap    # onglet 4 : enregistre maps/map.pgm + maps/map.yaml
 ```
 
 La carte est sauvegardée dans le dossier `maps/` du dépôt, donc visible sur ton Mac. Pour un autre nom : `make tb3-savemap MAP=circuit`.
 
-> Le guide utilise `map_saver -f ~/map`. Dans le container, utilise `~/maps/map` : c'est le dossier partagé avec le Mac, alors que `~/map` disparaît quand le container est recréé.
-
-**4.3 Navigation**
+**4.3 Navigation** (Nav2 remplace `move_base`)
 
 ```bash
 make tb3-world      # onglet 1
-make tb3-nav        # onglet 2 : AMCL + move_base + RViz (MAP=circuit pour une autre carte)
+make tb3-nav        # onglet 2 : Nav2 + RViz (MAP=circuit pour une autre carte)
 ```
 
-Dans RViz : **2D Pose Estimate** pour placer le robot, `make tb3-teleop` pour affiner la localisation puis **Ctrl+C**, et enfin **2D Nav Goal**.
+Dans RViz, le principe est le même que dans le guide : **2D Pose Estimate** pour placer le robot, puis **Nav2 Goal** (l'ancien *2D Nav Goal*).
 
-### 5. Autonomous Driving (AutoRace 2020)
+> Pour la navigation sur le circuit, le robot est un `burger_cam` : lance `TURTLEBOT3_MODEL=burger_cam make tb3-nav MAP=circuit` pour que Nav2 utilise les bons paramètres.
 
-Les paquets du guide (`image-transport`, `cv-bridge`, `vision-opencv`, `image-proc`, OpenCV…) sont déjà installés, et AutoRace est cloné par `make tb3-setup`. Commandes de la [doc ROBOTIS Noetic](https://emanual.robotis.com/docs/en/platform/turtlebot3/autonomous_driving/#autonomous-driving), en simulation :
+### 5. Autonomous Driving (AutoRace)
+
+Commandes de la [doc ROBOTIS](https://emanual.robotis.com/docs/en/platform/turtlebot3/autonomous_driving/), onglet **Jazzy**, en simulation. Chaque commande dans un onglet séparé :
 
 ```bash
-make tb3-autorace   # onglet 1 : piste AutoRace dans Gazebo
+make tb3-autorace   # piste AutoRace 2020 (ou make tb3-circuit)
 
-# onglet 2 : calibration intrinsèque (en simulation, elle charge le fichier fourni)
-make run CMD='roslaunch turtlebot3_autorace_camera intrinsic_camera_calibration.launch'
-
-# onglet 3 : calibration extrinsèque, puis réglages dans rqt
-make run CMD='roslaunch turtlebot3_autorace_camera extrinsic_camera_calibration.launch mode:=calibration'
-make run CMD='rqt'   # Plugins → Configuration → Dynamic Reconfigure / Visualization → Image View
+# 5.1 Calibration de la caméra
+make run CMD='ros2 launch turtlebot3_autorace_camera intrinsic_camera_calibration.launch.py'
+make run CMD='ros2 launch turtlebot3_autorace_camera extrinsic_camera_calibration.launch.py calibration_mode:=True'
+make run CMD='rqt'    # Plugins → Configuration → Dynamic Reconfigure, Visualization → Image View
 ```
 
 **5.2 Détection de ligne puis conduite :**
 
 ```bash
-make run CMD='roslaunch turtlebot3_autorace_camera extrinsic_camera_calibration.launch'   # mode action
-make run CMD='roslaunch turtlebot3_autorace_detect detect_lane.launch mode:=calibration'  # réglage des seuils
-make run CMD='roslaunch turtlebot3_autorace_driving turtlebot3_autorace_control_lane.launch'
+make run CMD='ros2 launch turtlebot3_autorace_camera extrinsic_camera_calibration.launch.py'
+make run CMD='ros2 launch turtlebot3_autorace_detect detect_lane.launch.py calibration_mode:=True'   # réglage des seuils
+make run CMD='ros2 launch turtlebot3_autorace_mission control_lane.launch.py'
 ```
 
-**Panneaux :** `roslaunch turtlebot3_autorace_detect detect_sign.launch mission:=intersection` (ou `construction`, `parking`, `level_crossing`, `tunnel`).
+**Panneaux :** `ros2 launch turtlebot3_autorace_detect detect_sign.launch.py mission:=intersection` (ou `construction`, `parking`, `level_crossing`, `tunnel`).
 
 ### 6. Missions
 
-Après la piste et les calibrations :
-
 ```bash
-make run CMD='roslaunch turtlebot3_autorace_detect detect_traffic_light.launch'
-make run CMD='roslaunch turtlebot3_autorace_core turtlebot3_autorace_core.launch mission:=traffic_light'
+make run CMD='ros2 launch turtlebot3_autorace_detect detect_traffic_light.launch.py'
+make run CMD='ros2 launch turtlebot3_autorace_mission mission_construction.launch.py'
+make run CMD='ros2 launch turtlebot3_autorace_mission mission_tunnel.launch.py'
 ```
 
-`mission:=` accepte `traffic_light`, `intersection`, `construction`, `parking`, `level_crossing`, `tunnel`. Les commandes complètes de chaque mission sont sur la [page ROBOTIS](https://emanual.robotis.com/docs/en/platform/turtlebot3/autonomous_driving/#traffic-lights).
+> Dans le nouveau Gazebo, le **feu tricolore** et la **barrière du passage à niveau** de la piste AutoRace sont fixes : ils étaient animés par des plugins de l'ancien Gazebo, qui ne fonctionnent plus. Le feu reste rouge et la barrière reste en place.
 
 ---
 
-## 🤖 Robot réel
-
-ROS 1 a besoin que le robot et le PC puissent **s'ouvrir des connexions dans les deux sens**. Docker Desktop sur macOS isole le container dans une VM, donc le robot ne peut pas joindre les nodes du container par défaut.
-
-**Ce qui marche à coup sûr : tout faire sur le robot, en SSH depuis le Mac.**
+## Turtlesim
 
 ```bash
-# Onglet 1
-ssh ubuntu@<IP_DU_ROBOT>
-roscore
-
-# Onglet 2
-ssh ubuntu@<IP_DU_ROBOT>
-export TURTLEBOT3_MODEL=burger
-roslaunch turtlebot3_bringup turtlebot3_robot.launch
-
-# Onglet 3 : téléopération, lancée sur le robot lui-même
-ssh ubuntu@<IP_DU_ROBOT>
-export TURTLEBOT3_MODEL=burger
-roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+make turtlesim                                   # onglet 1
+make run CMD='ros2 run turtlesim turtle_teleop_key'   # onglet 2 : flèches du clavier
+make run CMD="ros2 service call /spawn turtlesim/srv/Spawn \"{x: 2.0, y: 2.0, theta: 0.0, name: 'turtle2'}\""
 ```
-
-Sur le robot, `ROS_MASTER_URI` doit pointer vers lui-même (`http://localhost:11311`) dans `~/.bashrc`.
-
-**SLAM ou RViz avec le vrai robot** : ces outils doivent tourner côté PC, avec un réseau où le robot peut joindre le container. Deux options :
-
-- **Docker Desktop ≥ 4.34** : *Settings → Resources → Network → Enable host networking*, puis ajouter `network_mode: host` au service `noetic` (et retirer `ports:`). C'est une fonctionnalité encore récente, à tester sur le réseau de la salle.
-- Utiliser un PC Linux de la salle pour ces étapes.
 
 ---
 
@@ -180,19 +151,20 @@ Sur le robot, `ROS_MASTER_URI` doit pointer vers lui-même (`http://localhost:11
 
 | Raccourci | Commande |
 |-----------|----------|
-| `tb3-world` / `tb3-circuit` | Gazebo : TurtleBot3 World / circuit de la compétition |
+| `tb3-world` / `tb3-house` | Gazebo : TurtleBot3 World / House |
+| `tb3-circuit` / `tb3-autorace` | Gazebo : circuit de la compétition / piste AutoRace |
 | `tb3-teleop` | téléopération clavier |
-| `tb3-slam` | SLAM gmapping + RViz |
-| `tb3-savemap` | sauvegarde la carte dans `~/maps/map` |
-| `tb3-nav [nom]` | navigation avec `~/maps/<nom>.yaml` |
-| `cb` / `cbp <pkg>` | `catkin_make` (tout / un paquet) puis source |
-| `sw` | source `devel/setup.zsh` |
-| `rtl` / `rnl` | `rostopic list` / `rosnode list` |
+| `tb3-slam` | SLAM Cartographer + RViz |
+| `tb3-savemap [nom]` | sauvegarde la carte dans `~/maps/<nom>` |
+| `tb3-nav [nom]` | Nav2 avec `~/maps/<nom>.yaml` |
+| `cb` / `cbp <pkg>` | `colcon build` (tout / un paquet) puis source |
+| `sw` | source `install/setup.zsh` |
+| `rtl` / `rnl` | `ros2 topic list` / `ros2 node list` |
 
 ## Performances
 
-Docker sur Mac n'a pas d'accès au GPU : Gazebo et RViz tournent en rendu logiciel. C'est fluide pour TurtleBot3 World, plus lent sur le circuit et AutoRace. Si Gazebo rame :
+Docker sur Mac n'a pas d'accès au GPU : Gazebo et RViz tournent en rendu logiciel. Si Gazebo rame :
 
 - donne plus de CPU et de RAM à Docker (*Settings → Resources*), au moins 6 cœurs et 8 Go ;
-- réduis la taille du bureau : `VNC_GEOMETRY` dans `docker-compose.yml` (par exemple `1280x720`) ;
-- ferme la fenêtre de Gazebo (`gui:=false` quand le launch le permet) et garde seulement RViz.
+- lance la simulation sans fenêtre Gazebo et garde RViz : `make run CMD='ros2 launch tb3_worlds circuit.launch.py gui:=false'` ;
+- réduis la taille du bureau : `VNC_GEOMETRY` dans `docker-compose.yml` (par exemple `1280x720`).
