@@ -1,0 +1,18 @@
+services:
+  ros:
+    build: .
+    platform: linux/arm64
+    image: ros2-jazzy-arm64
+    container_name: ros2
+    hostname: ros2          # shown by Starship instead of a random container ID
+    volumes:
+      - ./ros2_ws/src:/ros2_ws/src   # your packages live on the Mac, build inside
+      - zsh_history:/root/.zsh_hist  # keep shell history across container rebuilds
+    shm_size: "512mb"       # DDS shared-memory transport needs more than the 64 MB default
+    environment:
+      - ROS_DOMAIN_ID=0
+      - HISTFILE=/root/.zsh_hist/history
+    init: true              # clean signal handling for `sleep infinity`
+
+volumes:
+  zsh_history:

@@ -1,0 +1,172 @@
+# Options Zsh essentielles
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt SHARE_HISTORY
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt CORRECT
+setopt NO_BEEP
+setopt EXTENDED_GLOB
+setopt HIST_FIND_NO_DUPS        # Don't show duplicates in history search
+setopt HIST_IGNORE_ALL_DUPS     # Remove older duplicate entries from history
+setopt AUTO_MENU                # Show completion menu on successive tab press
+setopt ALWAYS_TO_END            # Move cursor to end of word after completion
+setopt COMPLETE_IN_WORD         # Allow completion in middle of word
+setopt MENU_COMPLETE            # Insert first match immediately
+setopt LIST_PACKED              # Use variable column widths for completion list
+
+# Historique
+HISTSIZE=10000
+SAVEHIST=10000
+HISTFILE=${HISTFILE:-~/.zsh_history}   # docker-compose points this at a persistent volume
+
+# Variables d'environnement
+export PAGER='less'
+export EDITOR='vim'
+export LANG='en_US.UTF-8'
+export LC_ALL='en_US.UTF-8'
+export TERM='xterm-256color'
+
+# Chemins
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
+export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+
+# Alias essentiels avec couleurs douces
+alias v='vim'
+alias vi='vim'
+alias l='eza -lah --color=always --icons || ls -lah --color=auto'
+alias ll='eza -la --color=always --icons || ls -la --color=auto'
+alias la='eza -A --color=always --icons || ls -A --color=auto'
+alias lt='eza -T --color=always --icons --level=2 || tree -C -L 2'
+alias ..='cd .. && eza -lah --color=always --icons || cd ..'
+alias ...='cd ../.. && eza -lah --color=always --icons || cd ../..'
+alias grep='grep --color=auto'
+alias df='df -h'
+alias du='du -h'
+alias free='free -h'
+alias diff='delta --syntax-theme="base16" 2>/dev/null || diff --color=auto'
+alias top='htop 2>/dev/null || top'
+alias c='clear'
+alias uptime='uptime -p'
+
+# Alias développement
+alias make='make -j$(nproc)'
+alias m='make'
+alias mc='make clean'
+alias mr='make run'
+alias gdb='gdb -q'
+alias valgrind='valgrind --leak-check=full --show-leak-kinds=all'
+
+# Alias Git avec indicateurs simples
+alias g='git'
+alias gs='git status -sb'
+alias ga='echo -e "\033[32m+ Adding files...\033[0m" && git add'
+alias gc='echo -e "\033[34m* Committing...\033[0m" && git commit'
+alias gd='git diff --color=auto'
+alias gl='git log --graph --pretty=format:"%C(yellow)%h%C(reset) %C(green)%d%C(reset) %s %C(dim)(%cr) <%an>%C(reset)" --abbrev-commit'
+alias gp='echo -e "\033[35m^ Pushing...\033[0m" && git push'
+alias gpu='echo -e "\033[36mv Pulling...\033[0m" && git pull'
+alias gcl='git clone'
+
+# Alias monitoring
+alias htop='htop -t'
+
+# ---------- ROS 2 ----------
+source /opt/ros/${ROS_DISTRO}/setup.zsh
+[ -f /ros2_ws/install/setup.zsh ] && source /ros2_ws/install/setup.zsh
+export ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+
+alias cb='cd /ros2_ws && colcon build --symlink-install'
+alias cbp='cd /ros2_ws && colcon build --symlink-install --packages-select'
+alias ct='cd /ros2_ws && colcon test && colcon test-result --verbose'
+alias sw='source /ros2_ws/install/setup.zsh'
+alias ws='cd /ros2_ws'
+alias rtl='ros2 topic list'
+alias rnl='ros2 node list'
+
+# SSH agent (si nécessaire)
+if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval $(ssh-agent -s) > /dev/null
+fi
+
+# Starship prompt
+eval "$(starship init zsh)"
+
+# Complétion Zsh (+ bashcompinit pour ros2 / colcon)
+autoload -Uz compinit bashcompinit && compinit && bashcompinit
+command -v register-python-argcomplete >/dev/null && \
+    eval "$(register-python-argcomplete ros2)" && \
+    eval "$(register-python-argcomplete colcon)"
+
+# Enhanced completion behavior
+zstyle ':completion:*' menu select=2
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*:descriptions' format '%B%d%b'
+zstyle ':completion:*:messages' format '%d'
+zstyle ':completion:*:warnings' format 'No matches for: %d'
+zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
+
+# Better directory completion
+zstyle ':completion:*:cd:*' ignore-parents parent pwd
+zstyle ':completion:*' squeeze-slashes true
+zstyle ':completion:*' expand 'yes'
+zstyle ':completion:*' substitute 'yes'
+
+# Process completion for kill command
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+
+# Enable arrow key navigation in completion menu
+zmodload zsh/complist
+bindkey -M menuselect '^[[A' up-line-or-history      # Up arrow
+bindkey -M menuselect '^[[B' down-line-or-history    # Down arrow
+bindkey -M menuselect '^[[C' forward-char            # Right arrow
+bindkey -M menuselect '^[[D' backward-char           # Left arrow
+bindkey -M menuselect '^M' accept-line               # Enter to accept
+bindkey -M menuselect '^[' send-break                # Escape to cancel
+
+# Raccourcis clavier vim-like
+bindkey -v
+bindkey '^R' history-incremental-search-backward
+bindkey '^A' beginning-of-line
+bindkey '^E' end-of-line
+bindkey '^K' kill-line
+bindkey '^U' backward-kill-line
+
+# History search with arrow keys - PREFIX-based search
+bindkey '^[[A' history-search-backward  # Standard up arrow
+bindkey '^[[B' history-search-forward   # Standard down arrow
+bindkey '^[OA' history-search-backward  # SSH/alternative up arrow
+bindkey '^[OB' history-search-forward   # SSH/alternative down arrow
+bindkey '^P' history-search-backward
+bindkey '^N' history-search-forward
+
+# FZF si installé
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border'
+if [ -f ~/.fzf.zsh ]; then
+    source ~/.fzf.zsh
+elif [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ]; then
+    source /usr/share/doc/fzf/examples/key-bindings.zsh   # Ctrl-R / Ctrl-T via fzf
+fi
+
+# Message de bienvenue simple (only in interactive login shells, not `make run`)
+print_welcome() {
+    local uptime=$(command uptime -p | sed 's/up //')
+    local kernel=$(uname -r | cut -d'-' -f1)
+
+    echo ""
+    echo "\033[90m+--------------------------------+\033[0m"
+    echo "\033[90m|\033[0m  \033[36mROS 2 ${(C)ROS_DISTRO} (arm64)\033[0m"
+    echo "\033[90m|--------------------------------|\033[0m"
+    echo "\033[90m|\033[0m  Domain: \033[33m$ROS_DOMAIN_ID\033[0m"
+    echo "\033[90m|\033[0m  Uptime: \033[34m$uptime\033[0m"
+    echo "\033[90m|\033[0m  Kernel: \033[35m$kernel\033[0m"
+    echo "\033[90m+--------------------------------+\033[0m"
+    echo ""
+}
+
+[[ -o interactive && -t 1 && -z "$NO_WELCOME" ]] && print_welcome
