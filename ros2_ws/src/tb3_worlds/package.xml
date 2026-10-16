@@ -2,10 +2,10 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tb3_worlds</name>
-  <version>0.1.0</version>
+  <version>0.3.0</version>
   <description>
-    TurtleBot3 worlds for Gazebo (gz sim, ROS 2 Jazzy): the Upper Rhine Robotic Challenge
-    competition circuit and the ROBOTIS AutoRace 2020 track, ported from Gazebo Classic.
+    TurtleBot3 simulation for Gazebo (gz sim, ROS 2 Jazzy): lane-following tracks
+    (circuit, AutoRace 2020) and a launch file that bridges cmd_vel as geometry_msgs/Twist.
   </description>
   <maintainer email="ferraccimarieange@protonmail.com">mferracc</maintainer>
   <license>Apache-2.0</license>

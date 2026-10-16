@@ -1,5 +1,5 @@
 services:
-  # ROS 2 Jazzy + TurtleBot3 + Gazebo, desktop in the browser
+  # ROS 2 Jazzy + TurtleBot3 + Gazebo, desktop in the browser (Apple Silicon)
   ros:
     build:
       context: .
@@ -14,6 +14,8 @@ services:
     volumes:
       - ./ros2_ws/src:/ros2_ws/src   # your packages live on the Mac
       - ./maps:/root/maps            # maps saved by map_saver
+      - ./share:/root/share          # files to exchange with the Mac: rosbags, TF PDFs,
+                                     # screenshots, share/wallpaper.jpg (desktop background)
       - ros2_build:/ros2_ws/build    # build artifacts survive restarts
       - ros2_install:/ros2_ws/install
       - ros2_log:/ros2_ws/log
@@ -24,7 +26,7 @@ services:
       HISTFILE: /root/.zsh_hist/history
       ROS_DOMAIN_ID: 0
       TURTLEBOT3_MODEL: burger
-      VNC_GEOMETRY: 1600x900
+      VNC_GEOMETRY: ${VNC_GEOMETRY:-1600x900}
 
 volumes:
   ros2_build:

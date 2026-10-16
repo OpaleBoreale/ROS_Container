@@ -6,5 +6,8 @@ ros2_ws/log/
 # Third-party repo cloned by `make tb3-setup`
 ros2_ws/src/turtlebot3_autorace/
 
+# Rosbags can be large: keep them out of Git
+share/bags/
+
 .DS_Store
 __pycache__/

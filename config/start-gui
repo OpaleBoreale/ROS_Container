@@ -15,7 +15,23 @@ for _ in $(seq 1 20); do
     sleep 0.5
 done
 
-dbus-launch --exit-with-session startxfce4 >/tmp/xfce.log 2>&1 &
+# Session bus shared by XFCE and xfconf-query below
+eval "$(dbus-launch --sh-syntax)"
+startxfce4 >/tmp/xfce.log 2>&1 &
+
+# Desktop background: share/wallpaper.jpg (or .png) on the Mac, applied at each start
+(
+    wallpaper="$(ls /root/share/wallpaper.* 2>/dev/null | head -n 1 || true)"
+    [ -n "$wallpaper" ] || exit 0
+    for _ in $(seq 1 30); do
+        pgrep -x xfdesktop >/dev/null && break
+        sleep 1
+    done
+    sleep 2
+    for prop in $(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep 'last-image$'); do
+        xfconf-query -c xfce4-desktop -p "$prop" -s "$wallpaper"
+    done
+) >/tmp/wallpaper.log 2>&1 &
 
 echo "Desktop ready: http://localhost:6080/vnc.html"
 exec websockify --web /usr/share/novnc 6080 localhost:5901

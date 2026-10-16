@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ROS 2 Jazzy (LTS, Ubuntu 24.04) — native arm64 for Apple Silicon Macs
-# TurtleBot3 + Gazebo Harmonic + Nav2 + Cartographer + AutoRace, RViz/rqt
+# TurtleBot3 + Gazebo Harmonic + Nav2 + Cartographer + AutoRace + vision tools, RViz/rqt
 # Desktop served in the browser through noVNC: http://localhost:6080/vnc.html
 # Build context is the repo root (see docker-compose.yml)
 FROM --platform=linux/arm64 ros:jazzy-ros-base
@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ros-jazzy-desktop \
         ros-jazzy-ros-gz
 
-# 2/4 — TurtleBot3, SLAM (Cartographer, slam_toolbox), navigation (Nav2)
+# 2/4 — TurtleBot3, SLAM (Cartographer, slam_toolbox), navigation (Nav2), TF2 tutorials
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -34,9 +34,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ros-jazzy-cartographer-ros \
         ros-jazzy-slam-toolbox \
         ros-jazzy-navigation2 \
-        ros-jazzy-nav2-bringup
+        ros-jazzy-nav2-bringup \
+        ros-jazzy-turtle-tf2-py \
+        ros-jazzy-tf2-tools \
+        ros-jazzy-tf-transformations \
+        ros-jazzy-rqt-tf-tree
 
-# 3/4 — AutoRace (camera, image processing, calibration) + build tools
+# 3/4 — Vision and AutoRace (camera, image processing, calibration, OpenCV) + build tools
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -48,7 +52,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ros-jazzy-camera-calibration \
         ros-jazzy-rqt-image-view \
         ros-jazzy-rqt-reconfigure \
-        python3-opencv python3-numpy \
+        python3-opencv python3-numpy python3-matplotlib \
         python3-colcon-common-extensions python3-rosdep python3-pip \
         python3-vcstool python3-argcomplete \
         build-essential cmake git gdb valgrind
@@ -61,9 +65,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         tigervnc-standalone-server novnc websockify \
         mesa-utils libgl1-mesa-dri \
         zsh vim less tree htop eza fzf procps openssh-client \
-        iputils-ping net-tools curl ca-certificates locales \
+        iputils-ping net-tools curl wget ca-certificates locales \
     && (apt-get purge -y xfce4-screensaver light-locker || true) \
     && locale-gen en_US.UTF-8
+
+# Package lists kept in the image, so `apt-get install <pkg>` works right away
+# inside the container (the layers above keep them in a build cache only)
+RUN apt-get update
 
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
@@ -80,9 +88,9 @@ ENV DISPLAY=:1 \
     LIBGL_ALWAYS_SOFTWARE=1 \
     QT_X11_NO_MITSHM=1
 
-# Workspace
+# Workspace, plus folders shared with the Mac (see docker-compose.yml)
 WORKDIR /ros2_ws
-RUN mkdir -p /ros2_ws/src /root/maps
+RUN mkdir -p /ros2_ws/src /root/maps /root/share/bags
 
 # Keep bash usable too, with ROS sourced
 RUN cat >> /root/.bashrc <<'EOF'
@@ -91,7 +99,7 @@ source /opt/ros/jazzy/setup.bash
 EOF
 
 COPY config/start-gui     /usr/local/bin/start-gui
-RUN chmod +x /usr/local/bin/start-gui
+RUN sed -i 's/\r$//' /usr/local/bin/start-gui && chmod +x /usr/local/bin/start-gui
 
 # Dotfiles — kept last so editing them only rebuilds these layers
 COPY config/zshrc         /root/.zshrc

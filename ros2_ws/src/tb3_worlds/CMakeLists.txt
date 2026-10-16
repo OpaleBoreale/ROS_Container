@@ -3,7 +3,7 @@ project(tb3_worlds)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch models worlds
+install(DIRECTORY launch models params worlds
   DESTINATION share/${PROJECT_NAME}/
 )
 

@@ -1,8 +1,0 @@
-" Set line number
-set number
-
-" Set cursor shape
-if &term =~ "xterm"
-  let &t_SI = "\e[6 q"   " Insert mode: steady thin bar
-  let &t_EI = "\e[2 q"   " Normal mode: steady block (thick)
-endif
